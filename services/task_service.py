@@ -18,6 +18,34 @@ class TaskService:
         return task
 
     @staticmethod
+    def get_subtasks(task_id):
+        session = Database.get_session()
+        with session as session:
+            # for task_id in task_ids:
+            result = session.execute(select(Task).where(
+                Task.id == task_id)).scalars().first()
+            if result:
+                results = session.execute(select(Subtask).where(
+                    Subtask.task_id == result.id)).scalars().all()
+                return results
+        return None
+
+    @staticmethod
+    def update_subtasks(numbers):
+        session = Database.get_session()
+        with session as session:
+            # Get subtasks for the given task_id
+            subtasks = session.execute(
+                select(Subtask).where(Subtask.task_id.in_(numbers))
+            ).scalars().all()
+
+            # Update the specified column for each subtask
+            for subtask in subtasks:
+                setattr(subtask, 'status', 'Done')
+
+            session.commit()
+
+    @staticmethod
     def find_tasks(task_ids: list[int]):
         session = Database.get_session()
         task_texts = []

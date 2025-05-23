@@ -1,6 +1,6 @@
 # app/task_agent.py
-import pandas as pd
 import os
+import re
 from app.llm_agent import LLMAgent
 from services.task_service import TaskService
 from services.embedding_service import EmbeddingService
@@ -27,6 +27,44 @@ class TaskAgent:
         FAISSIndex.add_embedding(
             embedding, created_task.id)
         return {'subtasks': subtasks}
+
+    def update_task_status(self, user_msg, task_id: int, new_status: str):
+
+        subtasks = TaskService.get_subtasks(task_id)
+        print('before loop')
+        subtasks_info = ''
+        for subtask in subtasks:
+            subtasks_info += f'subtask_id:{subtask.id}, description:{subtask.subtask}\n\n'
+            print(subtask.task_id)
+            print(subtask.subtask)
+        prompt = f"""You are an AI assistant that can find related data, we know the user wants to update one or more of below subtasks to be marked as completed.
+        based on the user message:
+        {user_msg}
+        and the id and description of these subtasks:
+        {subtasks_info}
+        give a list of the subtasks id that should be updated (a python list of numbers).
+        """
+        print(prompt)
+        list_msg = self.llm.call(prompt)
+        matches = re.findall(r"\[\s*(\d+(?:\s*,\s*\d+)*)\s*\]", list_msg)
+
+        if matches:
+            numbers = [int(num) for num in matches[0].split(",")]
+            print(numbers)
+        if numbers:
+            print('heree before updating database', numbers, type(numbers))
+            TaskService.update_subtasks(numbers)
+
+    def answer_generall_question(self, user_msg):
+        prompt = f""""you are a personal planner assistant, it seems user asked a generall not specific related to planning question help them with that:
+        user message:{user_msg}"""
+        return self.llm.call(prompt)
+
+    def add_task(self, task_name: str):
+        pass
+
+    def list_tasks(self):
+        pass
 
     def natural_respond(self, state):
         user_message = state['input']

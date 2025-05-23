@@ -17,12 +17,15 @@ class IntentAgent:
         raw_embedding = EmbeddingService.get_embedding(user_message)
         matched_ids, _ = FAISSIndex.search(raw_embedding)
         print('matched_idss', matched_ids, type(matched_ids))
-        matched_tasks = '\n'.join(TaskService.find_tasks(matched_ids))
-        print('matched_taskss', matched_tasks, type(matched_tasks))
+        matched_tasks_names = TaskService.find_tasks(matched_ids)
+        matched_tasks = ''
+        for task_id, task_name in zip(matched_ids, matched_tasks_names):
+            matched_tasks += f'task_id:{task_id}, task_name:{task_name}\n'
+        # print('matched_taskss', matched_tasks, type(matched_tasks))
         prompt = f"""
 You are an AI assistant that extracts intent from user messages for a personal task manager app.
-    we store user's previous tasks wich each has multiple subtasks.
-    considering these possible related task which we got from database:
+    we store user's previous tasks in the database wich each has multiple subtasks.
+    considering these possible related task names which we got from database:
     {matched_tasks}
     Classify the user's message into one of the following intents:
     - create_new_task
@@ -36,14 +39,15 @@ Return a JSON object in the following format:
 {{
   "intent": "<intent>",
   "task": "<task_name_if_applicable>",
+  "task_id": "<task_id_if_from_database>",
   "subtask": "<subtask_name_if_applicable>",
   "status": "<new_status_if_applicable>"
 }}
 Message: "{user_message}"
 
-""" if len(matched_tasks) > 0 else f'''
+""" if len(matched_ids) > 0 else f'''
 You are an AI assistant that extracts intent from user messages for a personal task manager app.
-we store user's previous tasks wich each has multiple subtasks.
+we store user's previous tasks in the database wich each has multiple subtasks.
 considering that there is no task related to the the below message of user:
 Classify the user's message into one of the following intents:
 - create_new_task
@@ -56,7 +60,7 @@ Also extract any relevant fields such as task name, subtask name, or updated sta
 Return a JSON object in the following format:
 {{
   "intent": "<intent>",
-  "task": "<task_name_if_applicable>",
+  "task": "<task_name_from_database_if_applicable>",
   "subtask": "<subtask_name_if_applicable>",
   "status": "<new_status_if_applicable>"
 }}
@@ -64,7 +68,7 @@ Message: "{user_message}"
 
 '''
         try:
-            print('prompt in def parse_intent in intent agent:', user_message)
+            print('prompt in def parse_intent in intent agent:', prompt)
             response = self.llm_agent.call(prompt)
             pattern = r'{[\s\S]*?}'
 

@@ -37,16 +37,19 @@ class FAISSIndex:
             json.dump(cls._task_ids, f)
 
     @classmethod
-    def search(cls, query_embedding, k=5, threshold=0.5):
+    def search(cls, query_embedding, k=5, threshold=1):
         index = cls.get_index()
         vector = np.array(query_embedding, dtype='float32').reshape(1, -1)
         distances, indices = index.search(vector, k)
-
+        print('distances', distances)
+        print('indices', indices)
         matched_ids = []
         filtered_distances = []
-
+        for i in indices[0]:
+            if i >= 0:
+                print(i, cls._task_ids[i])
         for i, distance in zip(indices[0], distances[0]):
-            if i < len(cls._task_ids) and distance <= threshold:
+            if i >= 0 and i < len(cls._task_ids) and distance <= threshold:
                 matched_ids.append(cls._task_ids[i])
                 filtered_distances.append(distance)
 

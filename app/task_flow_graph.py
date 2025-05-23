@@ -30,9 +30,13 @@ def handle_create_task(state):
 
 
 def handle_update_status(state):
-    task = state["task"]
+    user_msg = state['input']
+    task_id = int(state["task_id"])
     status = state["status"]
-    task_agent.update_task_status(task, status)
+    task_agent.update_task_status(user_msg, task_id, status)
+    response = task_agent.natural_respond(state)
+    print('naturall responseeee', response)
+    state.update(response)
     return state
 
 
@@ -42,19 +46,24 @@ def handle_list_tasks(state):
     return state
 
 
+def handle_others(state):
+    state['respond'] = task_agent.answer_generall_question(state['input'])
+    return state
+
+
 def router(state):
     intent = state["intent"]
     if intent == "create_new_task":
         return "create_new_task"
-    elif intent == "update_task_status":
-        return "update_task_status"
+    elif intent == "update_subtask_status":
+        return "update_subtask_status"
     elif intent == "list_tasks":
         return "list_tasks"
     else:
         if 'error' in state and state['error'] == 'api error':
             state['respond'] = "Sorry, there was an api error"
         else:
-            state['respond'] = "I didn't understand. can you be a little more clarify"
+            return 'others'
         return END
 
 
@@ -66,19 +75,22 @@ class TaskFlowState(TypedDict, total=False):
     status: str
     respond: str
     error: str
+    task_id: str
 
 
 def build_task_flow_graph():
     graph = StateGraph(TaskFlowState)
     graph.add_node("parse_intent", parse_intent_node)
     graph.add_node("create_new_task", handle_create_task)
-    graph.add_node("update_task_status", handle_update_status)
+    graph.add_node("update_subtask_status", handle_update_status)
     graph.add_node("list_tasks", handle_list_tasks)
+    graph.add_node("others", handle_others)
 
     graph.set_entry_point("parse_intent")
     graph.add_conditional_edges("parse_intent", router)
     graph.add_edge("create_new_task", END)
-    graph.add_edge("update_task_status", END)
+    graph.add_edge("update_subtask_status", END)
     graph.add_edge("list_tasks", END)
+    graph.add_edge("others", END)
 
     return graph.compile()

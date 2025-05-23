@@ -9,7 +9,7 @@ print("API Key loaded:", os.getenv("ROUTER_API_KEY"))
 
 
 class LLMAgent:
-    def __init__(self, temperature=0.3, model="qwen/qwen3-0.6b-04-28:free"):
+    def __init__(self, temperature=0.3, model="meta-llama/llama-3.3-8b-instruct:free"):
         self.llm = ChatOpenAI(
             model_name=model,
             temperature=temperature,
